@@ -243,15 +243,15 @@ export function VendorConsole() {
             {vendor && <StatusBadge status={vendor.verificationStatus} />}
           </div>
           <p className="mt-1 text-xs text-muted">
-            Mobile-First Godown Console (≥48px warehouse touch targets) •{" "}
-            {vendor?.safetyBufferPct ?? 10}% Offline Safety Buffer Active
+            Supplier Warehouse &amp; Order Console • {vendor?.safetyBufferPct ?? 10}% safety reserve
+            kept free for offline walk-in orders
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="rounded-xl border border-teal/30 bg-teal-soft px-3.5 py-2 text-center">
             <p className="font-mono text-[10px] font-semibold uppercase text-teal-dark">
-              Reliability Index (VRI)
+              Your Trust Score
             </p>
             <p className="font-mono text-lg font-bold text-teal-dark">
               {vendor?.vriScore ?? 85}/100
@@ -259,9 +259,9 @@ export function VendorConsole() {
           </div>
           <div className="inline-flex rounded-xl border border-rule bg-canvas p-1 text-xs font-semibold">
             {[
-              { id: "bookings", label: `Holds & Audits (${softHoldCount} Urgent)` },
-              { id: "rfqs", label: `Incoming RFQs (${rfqs.length})` },
-              { id: "catalog", label: `Godown SKUs (${listings.length})` },
+              { id: "bookings", label: `Orders & Holds (${softHoldCount} Urgent)` },
+              { id: "rfqs", label: `New Requests (${rfqs.length})` },
+              { id: "catalog", label: `My Stock Items (${listings.length})` },
             ].map((t) => (
               <button
                 key={t.id}
@@ -351,13 +351,13 @@ export function VendorConsole() {
                           onClick={() => handleConfirmHold(bk.id)}
                           className="ek-btn-teal min-h-[48px] flex-1 sm:flex-none"
                         >
-                          <CheckCircle2 className="h-4 w-4" /> 1-Click Hard-Lock Confirm
+                          <CheckCircle2 className="h-4 w-4" /> Confirm Order &amp; Unlock Contact
                         </button>
                         <button
                           onClick={() => handleReleaseHold(bk.id)}
                           className="ek-btn-secondary min-h-[48px] border-red-300 text-red-700 hover:bg-red-50"
                         >
-                          <XCircle className="h-4 w-4" /> Sold Offline? Release Hold
+                          <XCircle className="h-4 w-4" /> Stock Booked Offline? Release Hold
                         </button>
                       </>
                     )}
@@ -373,7 +373,7 @@ export function VendorConsole() {
                         }
                         className="ek-btn-primary min-h-[48px]"
                       >
-                        <QrCode className="h-4 w-4" /> Complete QR Delivery Handover
+                        <QrCode className="h-4 w-4" /> Check-In Delivery (QR Pass)
                       </button>
                     )}
 
@@ -388,7 +388,7 @@ export function VendorConsole() {
                         }
                         className="ek-btn-teal min-h-[48px]"
                       >
-                        <ShieldCheck className="h-4 w-4" /> Run QR Return Inspection Audit
+                        <ShieldCheck className="h-4 w-4" /> Check Returned Items (QR Pass)
                       </button>
                     )}
                   </div>
@@ -581,10 +581,11 @@ export function VendorConsole() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/55 p-4 backdrop-blur-sm">
           <form onSubmit={handleSubmitBid} className="ek-card w-full max-w-lg p-6 space-y-4">
             <h3 className="font-display text-xl font-bold">
-              3-Way Unbundled Bid — {bidRfq.rfqCode}
+              Send Split-Up Price Quote — {bidRfq.rfqCode}
             </h3>
             <p className="text-xs text-muted">
-              FR-09 requires separating Base Rental, Transport/Freight, and Setup Labor.
+              Enter Item Rent, Delivery Truck Fee, and Setup Labor separately so the organizer sees
+              a transparent breakdown.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>

@@ -17,6 +17,7 @@ import { StatusBadge } from "../components/StatusBadge";
 import { CountdownTimer } from "../components/CountdownTimer";
 import { BookingLifecycleStepper } from "../components/BookingLifecycleStepper";
 import { ChecklistData, QrManifestModal } from "../components/QrManifestModal";
+import { HelpTooltip } from "../components/HelpTooltip";
 
 interface Category {
   id: string;
@@ -137,7 +138,11 @@ export function OrganizerWorkspace() {
       apiFetch<{ bookings: BookingItem[] }>("/bookings"),
     ]);
     setCategories(catRes.categories);
-    setRfqs(rfqRes.requirements);
+    const sortedRfqs = [...rfqRes.requirements].sort((a, b) => {
+      const rank = (s: string) => (s === "QUOTED" ? 0 : s === "BROADCAST" ? 1 : 2);
+      return rank(a.status) - rank(b.status);
+    });
+    setRfqs(sortedRfqs);
     setBookings(bkRes.bookings);
 
     if (catRes.categories.length > 0 && draftItems.length === 0) {
@@ -151,9 +156,12 @@ export function OrganizerWorkspace() {
       ]);
     }
 
-    const firstQuoted = rfqRes.requirements.find((r) => r.quotations.length > 0) || rfqRes.requirements[0];
-    if (firstQuoted && !selectedRfqId) {
-      setSelectedRfqId(firstQuoted.id);
+    const bestInitial =
+      sortedRfqs.find((r) => r.status === "QUOTED") ||
+      sortedRfqs.find((r) => r.quotations.length > 0) ||
+      sortedRfqs[0];
+    if (bestInitial && !selectedRfqId) {
+      setSelectedRfqId(bestInitial.id);
     }
   }
 
@@ -287,18 +295,18 @@ export function OrganizerWorkspace() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-wider text-saffron">
-            Organizer Command Center
+            Event Planner Workspace
           </p>
           <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">
-            RFQs, Quote Matrix & Handover Audits
+            Your Event Requests, Supplier Quotes & Bookings
           </h1>
         </div>
 
         <div className="inline-flex rounded-xl border border-rule bg-surface p-1 text-xs font-semibold">
           {[
-            { id: "rfqs", label: `Quote Matrix (${rfqs.length})` },
-            { id: "create", label: "+ New Structured RFQ" },
-            { id: "bookings", label: `Bookings & QR (${bookings.length})` },
+            { id: "rfqs", label: `Compare Quotes (${rfqs.length})` },
+            { id: "create", label: "+ Request New Quotes" },
+            { id: "bookings", label: `My Bookings & QR (${bookings.length})` },
           ].map((t) => (
             <button
               key={t.id}
@@ -376,12 +384,18 @@ export function OrganizerWorkspace() {
             ) : (
               <div className="ek-card overflow-hidden">
                 <div className="border-b border-rule bg-sand/50 px-5 py-4">
-                  <h2 className="font-display text-lg font-bold text-ink">
-                    Side-by-Side 3-Way Quotation Matrix (FR-11)
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-display text-lg font-bold text-ink">
+                      Compare Supplier Quotes Side-by-Side
+                    </h2>
+                    <HelpTooltip
+                      title="How Quote Comparison Works"
+                      text="Every supplier must split rent, delivery truck fee, and setup labor. Clicking 'Hold for 24h' reserves the items and automatically declines the other quotes."
+                    />
+                  </div>
                   <p className="text-xs text-muted">
-                    Every bid strictly unbundles Rental, Freight & Labor. Accepting one quote
-                    triggers an atomic 24h Soft-Hold and auto-declines competing bids.
+                    Compare Rent, Delivery Truck, and Setup Labor clearly. Choosing one supplier
+                    puts a 24-hour reservation hold while they confirm stock.
                   </p>
                 </div>
 
@@ -416,7 +430,7 @@ export function OrganizerWorkspace() {
                     </thead>
                     <tbody className="divide-y divide-rule">
                       <tr>
-                        <td className="px-4 py-2.5 font-semibold text-muted">Vendor Reliability (VRI)</td>
+                        <td className="px-4 py-2.5 font-semibold text-muted">Supplier Trust Score & Distance</td>
                         {matrixData.quotations.map((q) => (
                           <td key={q.id} className="px-4 py-2.5 font-mono font-semibold text-teal-dark">
                             {q.vendor.vriScore}/100 • {q.distanceKm ?? 0} km away
@@ -424,7 +438,7 @@ export function OrganizerWorkspace() {
                         ))}
                       </tr>
                       <tr>
-                        <td className="px-4 py-2.5 font-semibold text-muted">1. Base Equipment Rental</td>
+                        <td className="px-4 py-2.5 font-semibold text-muted">1. Equipment Rent</td>
                         {matrixData.quotations.map((q) => (
                           <td key={q.id} className="px-4 py-2.5 font-mono tabular-nums font-medium">
                             {formatINR(q.rentalSubtotal)}
@@ -432,7 +446,7 @@ export function OrganizerWorkspace() {
                         ))}
                       </tr>
                       <tr>
-                        <td className="px-4 py-2.5 font-semibold text-muted">2. Logistics & Freight</td>
+                        <td className="px-4 py-2.5 font-semibold text-muted">2. Truck & Delivery Cost</td>
                         {matrixData.quotations.map((q) => (
                           <td key={q.id} className="px-4 py-2.5 font-mono tabular-nums">
                             {formatINR(q.transportFee)}
@@ -440,7 +454,7 @@ export function OrganizerWorkspace() {
                         ))}
                       </tr>
                       <tr>
-                        <td className="px-4 py-2.5 font-semibold text-muted">3. Setup & Dismantling Labor</td>
+                        <td className="px-4 py-2.5 font-semibold text-muted">3. Setup & Removal Labor</td>
                         {matrixData.quotations.map((q) => (
                           <td key={q.id} className="px-4 py-2.5 font-mono tabular-nums">
                             {formatINR(q.laborFee)}
@@ -488,7 +502,7 @@ export function OrganizerWorkspace() {
                                   className="ek-btn-teal w-full py-2 text-xs"
                                 >
                                   <CheckCircle2 className="h-3.5 w-3.5" />
-                                  Accept & Soft-Hold (24h)
+                                  Choose & Hold for 24 Hours
                                 </button>
                                 <div className="flex gap-1.5">
                                   <button
@@ -498,7 +512,7 @@ export function OrganizerWorkspace() {
                                     }}
                                     className="ek-btn-secondary flex-1 py-1.5 text-[11px]"
                                   >
-                                    Request Revision
+                                    Ask Lower Price
                                   </button>
                                   {q.vendor.userId && (
                                     <button
@@ -536,11 +550,11 @@ export function OrganizerWorkspace() {
         <form onSubmit={handleCreateRfq} className="ek-card mx-auto max-w-3xl p-6 space-y-5">
           <div className="border-b border-rule pb-3">
             <h2 className="font-display text-xl font-bold text-ink">
-              Structured RFQ Requirement Builder (FR-06 to FR-08)
+              Request Quotes for Your Event
             </h2>
             <p className="text-xs text-muted">
-              Adding items from multiple categories automatically splits them into separate vendor
-              bidding pipelines.
+              Fill this once—nearby verified suppliers will send itemized prices. If you add items
+              from 2 categories (e.g., Tents + Catering), we split them cleanly for you.
             </p>
           </div>
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
+  Building2,
   CheckCircle2,
   EyeOff,
   Filter,
@@ -11,12 +12,14 @@ import {
   ShieldCheck,
   Star,
   Truck,
+  UserCheck,
 } from "lucide-react";
 import { INDORE_LOCALITIES } from "@eventkit/shared";
 import { apiFetch, formatINR } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { StatusBadge } from "../components/StatusBadge";
 import { IndoreGeofenceMap } from "../components/IndoreGeofenceMap";
+import { HelpTooltip } from "../components/HelpTooltip";
 
 interface Category {
   id: string;
@@ -104,65 +107,71 @@ export function LandingDiscoveryPage() {
     navigate("/auth");
   }
 
+  async function handleQuickRole(persona: string, path: string) {
+    await demoLogin(persona);
+    navigate(path);
+  }
+
   return (
     <div className="space-y-8">
-      {/* Editorial Industrial Hero */}
+      {/* Warm Plain-English Hero */}
       <section className="ek-card relative overflow-hidden bg-surface p-6 sm:p-10">
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.9fr] lg:items-center">
           <div className="space-y-5">
             <div className="inline-flex items-center gap-2 rounded-full border border-saffron/30 bg-saffron-soft px-3 py-1 text-xs font-semibold text-saffron-dark">
               <ShieldCheck className="h-3.5 w-3.5" />
-              Indore B2B Event Infrastructure Network • Zero Hidden Freight
+              Verified Indore Event Suppliers • Zero Hidden Charges
             </div>
 
             <h1 className="font-display text-3xl font-bold tracking-tight text-ink sm:text-5xl sm:leading-[1.08]">
-              Book verified tent houses, catering & sound with{" "}
-              <span className="text-saffron">unbundled quotes</span> and{" "}
-              <span className="text-teal">24h soft-hold locks</span>.
+              Book tents, catering & sound with{" "}
+              <span className="text-saffron">clear itemized prices</span> and{" "}
+              <span className="text-teal">guaranteed stock</span>.
             </h1>
 
             <p className="max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
-              EventKit replaces verbal phone haggling and double-booked paper registers with one
-              structured RFQ, side-by-side 3-way cost breakdowns (Rental + Freight + Labor), 10%
-              safety buffers, and QR-verified delivery & return manifests.
+              Planning a wedding, college fest, or corporate event? Tell us what items you need
+              once—verified local suppliers send back transparent quotes separating{" "}
+              <strong>item rent</strong>, <strong>truck delivery</strong>, and{" "}
+              <strong>setup labor</strong> so you can compare side-by-side and book safely.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <button onClick={handleQuickOrganizerStart} className="ek-btn-primary">
-                Launch RFQ Builder
+                Request Event Quotes Now
                 <ArrowRight className="h-4 w-4" />
               </button>
               <Link to="/auth" className="ek-btn-secondary">
-                Vendor Onboarding / Sign In
+                Supplier Sign Up / Login
               </Link>
             </div>
           </div>
 
-          {/* 4-Pillar Engineering Mechanics Card */}
-          <div className="rounded-xl border border-rule bg-canvas p-5 space-y-3.5">
+          {/* Plain-English 4-Step Walkthrough Card */}
+          <div className="rounded-xl border border-rule bg-canvas p-5 space-y-3">
             <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted">
-              Verified Lifecycle Guarantees
+              How EventKit Protects Your Event (4 Simple Steps)
             </p>
             {[
               {
                 icon: Truck,
-                title: "3-Way Unbundled Quotations",
-                desc: "Rental, Transport & Setup Labor separated cleanly in every bid.",
+                title: "1. Clear 3-Part Price Breakdown",
+                desc: "Every quote shows Item Rent, Delivery Truck, and Setup Labor separately—no surprise fees.",
               },
               {
                 icon: Lock,
-                title: "Two-Phase Commit (24h Soft-Hold)",
-                desc: "ACID row-locks + 10% offline buffer prevent event-day cancellations.",
+                title: "2. 24-Hour Hold Prevents Double-Booking",
+                desc: "When you pick a quote, items stay reserved for 24h while the supplier confirms stock.",
               },
               {
                 icon: EyeOff,
-                title: "Privacy-Gated Contact Masking",
-                desc: "Phones & exact godowns stay masked until vendor hard-confirms.",
+                title: "3. Phone Numbers Stay Private Until Confirmed",
+                desc: "Avoid spam calls—exact addresses and numbers unlock only after booking confirmation.",
               },
               {
                 icon: QrCode,
-                title: "Dual QR Handover Audit",
-                desc: "HMAC-signed Delivery & Return checklists resolve damage disputes.",
+                title: "4. QR Code Check-In at Delivery & Return",
+                desc: "Count items together with a scannable QR pass so damage or missing-chair disputes stay fair.",
               },
             ].map((item) => {
               const Icon = item.icon;
@@ -185,6 +194,57 @@ export function LandingDiscoveryPage() {
         </div>
       </section>
 
+      {/* First-Time Visitor Quick Navigator */}
+      <section className="grid gap-3 md:grid-cols-3">
+        <button
+          type="button"
+          onClick={() => handleQuickRole("ORGANIZER", "/organizer")}
+          className="ek-card p-4 text-left transition hover:border-saffron hover:bg-saffron-soft/30"
+        >
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-saffron-dark">
+              <UserCheck className="h-4 w-4" /> I am an Event Planner
+            </span>
+            <ArrowRight className="h-3.5 w-3.5 text-muted" />
+          </div>
+          <p className="mt-1.5 text-xs text-muted">
+            Compare 3 supplier quotes side-by-side, create a new event request, or check bookings.
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleQuickRole("VENDOR_MALWA", "/vendor")}
+          className="ek-card p-4 text-left transition hover:border-teal hover:bg-teal-soft/40"
+        >
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-dark">
+              <Building2 className="h-4 w-4" /> I am an Equipment Supplier
+            </span>
+            <ArrowRight className="h-3.5 w-3.5 text-muted" />
+          </div>
+          <p className="mt-1.5 text-xs text-muted">
+            Manage warehouse stock, reply to incoming event requests, or confirm a 24-hour hold.
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleQuickRole("ADMIN", "/admin")}
+          className="ek-card p-4 text-left transition hover:border-ink hover:bg-sand/50"
+        >
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-ink">
+              <ShieldCheck className="h-4 w-4" /> I am Testing as Admin
+            </span>
+            <ArrowRight className="h-3.5 w-3.5 text-muted" />
+          </div>
+          <p className="mt-1.5 text-xs text-muted">
+            Approve pending supplier documents, resolve item damage disputes, or simulate 24h expiry.
+          </p>
+        </button>
+      </section>
+
       {/* Interactive Indore 25km Geofence Radar */}
       <IndoreGeofenceMap
         selectedLocality={selectedLocality}
@@ -201,14 +261,12 @@ export function LandingDiscoveryPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search chairs, German hangar, chafing dish, JBL audio, or locality..."
+              placeholder="Search chairs, tent canopy, buffet dishes, sound speakers, or area..."
               className="ek-input pl-9"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-              <Filter className="h-3.5 w-3.5" />
-            </div>
+            <Filter className="h-3.5 w-3.5 text-muted" />
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -228,21 +286,22 @@ export function LandingDiscoveryPage() {
             >
               {INDORE_LOCALITIES.map((l) => (
                 <option key={l.name} value={l.name}>
-                  Venue: {l.name}
+                  Event Area: {l.name}
                 </option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Verified Vendor Catalog Feed */}
+        {/* Verified Supplier Catalog Feed */}
         {loading ? (
           <div className="ek-card p-10 text-center text-sm text-muted">
-            Loading verified Indore rental godowns...
+            Loading verified Indore suppliers...
           </div>
         ) : vendors.length === 0 ? (
           <div className="ek-card p-10 text-center text-sm text-muted">
-            No verified vendors matched your filters. Try clearing search or choosing all categories.
+            No verified suppliers matched your filters. Try clearing search or choosing all
+            categories.
           </div>
         ) : (
           <div className="grid gap-5 lg:grid-cols-2">
@@ -258,17 +317,21 @@ export function LandingDiscoveryPage() {
                         <StatusBadge status="VERIFIED" />
                       </div>
                       <p className="mt-1 text-xs text-muted">
-                        {vendor.maskedContact.warehouseAddress} •{" "}
+                        {vendor.locality}, {vendor.city} •{" "}
                         <span className="font-mono font-semibold text-ink">
-                          {vendor.distanceKm} km away
+                          {vendor.distanceKm} km from {selectedLocality}
                         </span>
                       </p>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <div className="rounded-lg border border-teal/25 bg-teal-soft px-2.5 py-1 text-right">
-                        <p className="font-mono text-[10px] font-semibold uppercase text-teal-dark">
-                          VRI Score
+                        <p className="flex items-center justify-end gap-1 font-mono text-[10px] font-semibold uppercase text-teal-dark">
+                          Trust Score
+                          <HelpTooltip
+                            title="Trust Score (VRI)"
+                            text="Score out of 100 based on completed bookings (40%), on-time delivery (30%), zero disputes (20%), and customer ratings (10%)."
+                          />
                         </p>
                         <p className="font-mono text-sm font-bold text-teal-dark">
                           {vendor.vriScore}/100
@@ -283,19 +346,22 @@ export function LandingDiscoveryPage() {
                     </div>
                   </div>
 
-                  {/* Masked Contact Privacy Strip (BR-08 / TC-06) */}
+                  {/* Masked Contact Privacy Strip */}
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-rule bg-canvas/80 px-3 py-2 text-[11px] text-muted">
                     <span className="inline-flex items-center gap-1.5">
                       <EyeOff className="h-3.5 w-3.5 text-saffron" />
-                      Pre-booking Privacy Active: {vendor.maskedContact.phone} •{" "}
-                      {vendor.maskedContact.email}
+                      Contact hidden until booking confirms ({vendor.maskedContact.phone})
                     </span>
-                    <span className="font-mono font-semibold text-ink">
-                      {vendor.safetyBufferPct}% Safety Buffer
+                    <span className="inline-flex items-center gap-1 font-mono font-semibold text-ink">
+                      {vendor.safetyBufferPct}% Safety Reserve
+                      <HelpTooltip
+                        title="10% Safety Reserve"
+                        text="We keep 10% of every supplier's physical stock unbooked online so sudden offline walk-in rentals never cause shortages."
+                      />
                     </span>
                   </div>
 
-                  {/* SKUs & Indicative Availability */}
+                  {/* Items & Availability */}
                   <div className="mt-4 space-y-2.5">
                     {vendor.listings.map((sku) => (
                       <div
@@ -310,8 +376,9 @@ export function LandingDiscoveryPage() {
                             <span className="text-sm font-semibold text-ink">{sku.itemName}</span>
                           </div>
                           <p className="mt-0.5 text-xs text-muted">
-                            {sku.categoryName} • {sku.availability.allocatableCapacity} online
-                            allocatable ({sku.totalPhysicalStock} physical)
+                            {sku.categoryName} •{" "}
+                            <strong>{sku.availability.allocatableCapacity} ready to book</strong> (of{" "}
+                            {sku.totalPhysicalStock} total)
                           </p>
                         </div>
 
@@ -333,13 +400,13 @@ export function LandingDiscoveryPage() {
 
                 <div className="mt-4 flex items-center justify-between border-t border-rule pt-3 text-xs">
                   <span className="inline-flex items-center gap-1 text-teal-dark font-medium">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Eligible for Broadcast & Targeted RFQs
+                    <CheckCircle2 className="h-3.5 w-3.5" /> GST/ID Verified by Admin
                   </span>
                   <button
                     onClick={handleQuickOrganizerStart}
                     className="font-semibold text-saffron hover:underline"
                   >
-                    Request Quote →
+                    Ask for Price Quote →
                   </button>
                 </div>
               </div>

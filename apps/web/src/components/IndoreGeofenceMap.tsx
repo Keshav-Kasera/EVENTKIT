@@ -42,15 +42,15 @@ export function IndoreGeofenceMap({
           <Navigation className="h-4 w-4 text-saffron" />
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-muted">
-              Indore 25 km Logistics Geofence
+              Indore Delivery Distance Map (Within 25 km)
             </p>
             <p className="text-sm font-semibold text-ink">
-              Center: {center.name} (Click any zone to recalculate distances)
+              Your Event Area: {center.name} (Click any dot on the map to check supplier distance)
             </p>
           </div>
         </div>
         <span className="rounded-md bg-surface px-2.5 py-1 font-mono text-xs font-semibold text-teal-dark border border-teal/20">
-          {vendors.length} Verified Godowns
+          {vendors.length} Verified Suppliers
         </span>
       </div>
 
@@ -132,11 +132,11 @@ export function IndoreGeofenceMap({
 
         <div className="border-t border-rule bg-surface p-3 lg:border-l lg:border-t-0">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">
-            Godown Distance Matrix
+            Supplier Distance From {center.name}
           </p>
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
             {vendors.length === 0 ? (
-              <p className="text-xs text-muted">No verified vendors match current filter.</p>
+              <p className="text-xs text-muted">No verified suppliers match your current filter.</p>
             ) : (
               vendors.map((v) => {
                 const loc = INDORE_LOCALITIES.find((l) => l.name === v.locality);
@@ -152,7 +152,7 @@ export function IndoreGeofenceMap({
                       <p className="truncate font-semibold text-ink">{v.businessName}</p>
                       <p className="flex items-center gap-1 text-[11px] text-muted">
                         <MapPin className="h-3 w-3 text-saffron" />
-                        {v.locality} • VRI {v.vriScore}
+                        {v.locality} • Trust {v.vriScore}/100
                       </p>
                     </div>
                     <span className="ml-2 shrink-0 rounded bg-sand px-2 py-0.5 font-mono text-[11px] font-semibold text-ink">

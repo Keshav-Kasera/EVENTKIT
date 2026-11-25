@@ -85,16 +85,22 @@ export function AdminDesk() {
     loadAll().catch((e) => setErr(e.message));
   }, []);
 
-  async function handleKycDecision(vendorId: string, status: "VERIFIED" | "REJECTED") {
+  async function handleKycDecision(
+    vendorId: string,
+    status: "VERIFIED" | "REJECTED" | "SUSPENDED"
+  ) {
     setErr("");
     await apiFetch(`/admin/kyc/${vendorId}`, {
       method: "PATCH",
       body: JSON.stringify({
         verificationStatus: status,
-        rejectionReason: status === "REJECTED" ? "Document mismatch during audit" : null,
+        rejectionReason:
+          status === "REJECTED" || status === "SUSPENDED"
+            ? "Action taken by admin compliance audit"
+            : null,
       }),
     });
-    setMsg(`Vendor KYC updated to ${status}.`);
+    setMsg(`Supplier status updated to ${status}.`);
     await loadAll();
   }
 
@@ -140,17 +146,17 @@ export function AdminDesk() {
       <div className="ek-card flex flex-wrap items-center justify-between gap-4 p-5">
         <div>
           <p className="font-mono text-xs font-semibold uppercase tracking-wider text-teal-dark">
-            Platform Governance & Arbitration
+            Platform Safety &amp; Approvals
           </p>
           <h1 className="font-display text-2xl font-bold text-ink">
-            Admin Compliance & Watchdog Desk
+            Admin Approval, Disputes &amp; Timer Desk
           </h1>
         </div>
         <div className="inline-flex rounded-xl border border-rule bg-canvas p-1 text-xs font-semibold">
           {[
-            { id: "kyc", label: `KYC Queue (${vendors.filter((v) => v.verificationStatus === "PENDING").length} Pending)` },
-            { id: "disputes", label: `Disputes (${tickets.filter((t) => t.status === "OPEN").length} Open)` },
-            { id: "watchdog", label: `Watchdog & Audit Logs (${logs.length})` },
+            { id: "kyc", label: `Supplier Approvals (${vendors.filter((v) => v.verificationStatus === "PENDING").length} Pending)` },
+            { id: "disputes", label: `Damage Disputes (${tickets.filter((t) => t.status === "OPEN").length} Open)` },
+            { id: "watchdog", label: `24h Timer & Activity Log (${logs.length})` },
           ].map((t) => (
             <button
               key={t.id}
@@ -194,18 +200,36 @@ export function AdminDesk() {
                 GSTIN: {v.gstNumber || "Not provided"} • Godown: {v.warehouseAddress}
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={() => handleKycDecision(v.id, "VERIFIED")}
-                  className="ek-btn-teal flex-1 py-2 text-xs"
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Approve & List Publicly
-                </button>
-                <button
-                  onClick={() => handleKycDecision(v.id, "REJECTED")}
-                  className="ek-btn-secondary py-2 text-xs text-red-700"
-                >
-                  <XCircle className="h-3.5 w-3.5" /> Reject
-                </button>
+                {v.verificationStatus !== "VERIFIED" ? (
+                  <>
+                    <button
+                      onClick={() => handleKycDecision(v.id, "VERIFIED")}
+                      className="ek-btn-teal flex-1 py-2 text-xs"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Approve &amp; Show Publicly
+                    </button>
+                    {v.verificationStatus !== "REJECTED" && (
+                      <button
+                        onClick={() => handleKycDecision(v.id, "REJECTED")}
+                        className="ek-btn-secondary py-2 text-xs text-red-700"
+                      >
+                        <XCircle className="h-3.5 w-3.5" /> Reject
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex w-full items-center justify-between rounded-lg border border-teal/20 bg-teal-soft/50 px-3 py-2 text-xs">
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-teal-dark">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Live in Public Marketplace
+                    </span>
+                    <button
+                      onClick={() => handleKycDecision(v.id, "SUSPENDED")}
+                      className="font-semibold text-red-700 hover:underline"
+                    >
+                      Suspend
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}

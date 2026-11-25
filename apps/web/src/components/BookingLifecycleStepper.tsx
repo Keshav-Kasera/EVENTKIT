@@ -1,10 +1,10 @@
 import { AlertTriangle, Check } from "lucide-react";
 
 const STAGES = [
-  { key: "SOFT_HOLD", label: "24h Soft-Hold" },
-  { key: "CONFIRMED", label: "Hard-Lock & Unmasked" },
-  { key: "DELIVERED", label: "Delivery QR Signed" },
-  { key: "COMPLETED", label: "Return Audit & Review" },
+  { key: "SOFT_HOLD", label: "1. 24h Vendor Hold" },
+  { key: "CONFIRMED", label: "2. Confirmed & Contact Shared" },
+  { key: "DELIVERED", label: "3. Delivered (QR Checked)" },
+  { key: "COMPLETED", label: "4. Returned & Reviewed" },
 ];
 
 export function BookingLifecycleStepper({ status }: { status: string }) {
@@ -14,7 +14,7 @@ export function BookingLifecycleStepper({ status }: { status: string }) {
   if (isReleased) {
     return (
       <div className="rounded-lg border border-rule bg-sand/70 px-3 py-2 text-xs font-medium text-muted">
-        Booking released — reserved inventory buffer restored to vendor pool.
+        Hold released — reserved items are back in stock for other organizers.
       </div>
     );
   }
@@ -67,7 +67,7 @@ export function BookingLifecycleStepper({ status }: { status: string }) {
                 idx + 1
               )}
             </span>
-            <span className="truncate">{disputeNode ? "Disputed Escalation" : stage.label}</span>
+            <span className="truncate">{disputeNode ? "Dispute Under Review" : stage.label}</span>
           </div>
         );
       })}
