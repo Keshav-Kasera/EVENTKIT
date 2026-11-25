@@ -1,0 +1,22 @@
+# Dependencies & Build
+node_modules/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+
+# Environment & Secrets (NEVER commit .env files)
+.env
+.env.local
+.env.*.local
+
+# Uploads & Runtime logs
+apps/api/uploads/*
+!apps/api/uploads/.gitkeep
+*.log
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.neon

@@ -1,0 +1,23 @@
+{
+  "name": "eventkit-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EventKit — B2B Event-Vendor Discovery, RFQ & Rental Lifecycle Platform",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:api": "pnpm --filter @eventkit/api dev",
+    "dev:web": "pnpm --filter @eventkit/web dev",
+    "build": "pnpm --filter @eventkit/shared build && pnpm --filter @eventkit/api build && pnpm --filter @eventkit/web build",
+    "db:generate": "pnpm --filter @eventkit/api db:generate",
+    "db:push": "pnpm --filter @eventkit/api db:push",
+    "db:seed": "pnpm --filter @eventkit/api db:seed",
+    "test": "pnpm --filter @eventkit/api test"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@neon/config": "^1.14.6",
+    "@neon/env": "^2.1.9"
+  }
+}

@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: eventkit-api
+    runtime: node
+    plan: free
+    buildCommand: pnpm install && pnpm --filter @eventkit/shared build && pnpm --filter @eventkit/api db:generate && pnpm --filter @eventkit/api build
+    startCommand: pnpm --filter @eventkit/api db:push && pnpm --filter @eventkit/api db:seed:safe && pnpm --filter @eventkit/api start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: JWT_EXPIRES_IN
+        value: 72h
+      - key: ENABLE_DEMO_MODE
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_UNPOOLED
+        sync: false
+      - key: DEMO_SEED_PASSWORD
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: QR_HMAC_SECRET
+        generateValue: true
+      - key: CLIENT_ORIGIN
+        sync: false

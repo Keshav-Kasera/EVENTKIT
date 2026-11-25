@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    background-color: #f6f3ec;
+    color: #16181d;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .ek-card {
+    @apply bg-surface border border-rule rounded-xl shadow-[0_1px_2px_rgba(22,24,29,0.04)];
+  }
+  .ek-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-saffron px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-saffron-dark disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .ek-btn-teal {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-teal px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-dark disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .ek-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-rule bg-surface px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-sand disabled:opacity-50;
+  }
+  .ek-input {
+    @apply w-full rounded-lg border border-rule bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted/70 focus:border-saffron focus:outline-none focus:ring-2 focus:ring-saffron/15;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

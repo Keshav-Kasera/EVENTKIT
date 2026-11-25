@@ -1,0 +1,429 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum UserRole {
+  ORGANIZER
+  VENDOR
+  ADMIN
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum UnitType {
+  PER_PIECE
+  PER_SQFT
+  PER_SET
+}
+
+enum RequirementStatus {
+  DRAFT
+  BROADCAST
+  QUOTED
+  CLOSED
+  CANCELLED
+}
+
+enum QuotationStatus {
+  SENT
+  REVISION_REQUESTED
+  ACCEPTED
+  DECLINED_AUTO
+  DECLINED_BY_ORG
+  EXPIRED
+}
+
+enum BookingStatus {
+  SOFT_HOLD
+  HOLD_RELEASED
+  CONFIRMED
+  DELIVERED
+  RETURNED
+  COMPLETED
+  DISPUTED
+  CANCELLED_PRE_EVENT
+}
+
+enum EscrowStatus {
+  NONE
+  ADVANCE_LOCKED
+  RELEASED
+  FROZEN_DISPUTE
+}
+
+enum ChecklistType {
+  DELIVERY
+  RETURN
+}
+
+enum TicketCategory {
+  NON_RESPONSIVE
+  DAMAGE_DISPUTE
+  CANCEL_DISAGREEMENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_MEDIATION
+  RESOLVED
+  CLOSED
+}
+
+// 1. USERS
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  passwordHash     String
+  fullName         String
+  phone            String
+  role             UserRole
+  organizationType String?
+  billingAddress   String?
+  city             String   @default("Indore")
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  vendorProfile    VendorProfile?
+  requirements     EventRequirement[]
+  reviews          Review[]
+  raisedTickets    SupportTicket[]    @relation("TicketRaisedBy")
+  resolvedTickets  SupportTicket[]    @relation("TicketResolvedBy")
+  sentMessages     Message[]          @relation("MessageSender")
+  receivedMessages Message[]          @relation("MessageReceiver")
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+
+  @@map("users")
+}
+
+// 2. VENDOR_PROFILES
+model VendorProfile {
+  id                 String             @id @default(uuid())
+  userId             String             @unique
+  businessName       String
+  verificationStatus VerificationStatus @default(PENDING)
+  idProofUrl         String?
+  gstNumber          String?
+  warehouseAddress   String
+  locality           String             @default("Vijay Nagar")
+  latitude           Float              @default(22.7533)
+  longitude          Float              @default(75.8937)
+  safetyBufferPct    Int                @default(10)
+  vriScore           Float              @default(85.0)
+  rejectionReason    String?
+  verifiedAt         DateTime?
+  stockRefreshedAt   DateTime           @default(now())
+
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listings   ServiceListing[]
+  quotations Quotation[]
+  reviews    Review[]
+
+  @@index([verificationStatus, locality])
+  @@map("vendor_profiles")
+}
+
+// 3. SERVICE_CATEGORIES
+model ServiceCategory {
+  id          String @id @default(uuid())
+  slug        String @unique
+  name        String
+  description String
+
+  listings     ServiceListing[]
+  requirements EventRequirement[]
+
+  @@map("service_categories")
+}
+
+// 4. SERVICE_LISTINGS
+model ServiceListing {
+  id                 String   @id @default(uuid())
+  vendorId           String
+  categoryId         String
+  skuCode            String
+  itemName           String
+  description        String?
+  unitType           UnitType @default(PER_PIECE)
+  baseRatePerDay     Float
+  replacementValue   Float    @default(0)
+  totalPhysicalStock Int
+  isPackage          Boolean  @default(false)
+  packageItems       Json?
+  photoUrl           String?
+  updatedAt          DateTime @updatedAt
+
+  vendor             VendorProfile       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category           ServiceCategory     @relation(fields: [categoryId], references: [id])
+  availabilityBlocks AvailabilityBlock[]
+  requirementItems   RequirementItem[]
+  quoteItems         QuoteItem[]
+
+  @@index([vendorId, categoryId])
+  @@map("service_listings")
+}
+
+// 5. AVAILABILITY_BLOCKS
+model AvailabilityBlock {
+  id               String   @id @default(uuid())
+  listingId        String
+  bookingId        String?
+  blockDate        DateTime @db.Date
+  reservedQuantity Int
+  createdAt        DateTime @default(now())
+
+  listing ServiceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  booking Booking?       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, blockDate])
+  @@index([bookingId])
+  @@map("availability_blocks")
+}
+
+// 6. EVENT_REQUIREMENTS (RFQs)
+model EventRequirement {
+  id              String            @id @default(uuid())
+  organizerId     String
+  categoryId      String
+  batchId         String?
+  rfqCode         String            @unique
+  title           String
+  eventType       String
+  startDate       DateTime          @db.Date
+  endDate         DateTime          @db.Date
+  venueAddress    String
+  venueLocality   String
+  venueLat        Float             @default(22.7196)
+  venueLng        Float             @default(75.8577)
+  guestCount      Int
+  targetBudget    Float?
+  targetVendorIds Json?
+  status          RequirementStatus @default(BROADCAST)
+  createdAt       DateTime          @default(now())
+
+  organizer  User              @relation(fields: [organizerId], references: [id])
+  category   ServiceCategory   @relation(fields: [categoryId], references: [id])
+  items      RequirementItem[]
+  quotations Quotation[]
+  messages   Message[]
+
+  @@index([organizerId, status])
+  @@map("event_requirements")
+}
+
+// 7. REQUIREMENT_ITEMS
+model RequirementItem {
+  id                String   @id @default(uuid())
+  requirementId     String
+  listingId         String?
+  itemName          String
+  unitType          UnitType @default(PER_PIECE)
+  requestedQuantity Int
+  notes             String?
+
+  requirement EventRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  listing     ServiceListing?  @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@map("requirement_items")
+}
+
+// 8. QUOTATIONS
+model Quotation {
+  id              String          @id @default(uuid())
+  requirementId   String
+  vendorId        String
+  rentalSubtotal  Float
+  transportFee    Float
+  laborFee        Float
+  taxAmount       Float           @default(0)
+  securityDeposit Float           @default(0)
+  totalAmount     Float
+  validUntil      DateTime
+  revisionCount   Int             @default(0)
+  revisionNotes   String?
+  notes           String?
+  status          QuotationStatus @default(SENT)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  requirement EventRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  vendor      VendorProfile    @relation(fields: [vendorId], references: [id])
+  items       QuoteItem[]
+  booking     Booking?
+
+  @@unique([requirementId, vendorId])
+  @@index([status, validUntil])
+  @@map("quotations")
+}
+
+// 9. QUOTE_ITEMS
+model QuoteItem {
+  id          String  @id @default(uuid())
+  quotationId String
+  listingId   String?
+  itemName    String
+  quantity    Int
+  unitPrice   Float
+  subtotal    Float
+
+  quotation Quotation       @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  listing   ServiceListing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@map("quote_items")
+}
+
+// 10. BOOKINGS
+model Booking {
+  id            String        @id @default(uuid())
+  bookingCode   String        @unique
+  quotationId   String        @unique
+  status        BookingStatus @default(SOFT_HOLD)
+  holdExpiresAt DateTime
+  confirmedAt   DateTime?
+  deliveredAt   DateTime?
+  returnedAt    DateTime?
+  completedAt   DateTime?
+  escrowStatus  EscrowStatus  @default(NONE)
+  advanceAmount Float         @default(0)
+  depositAmount Float         @default(0)
+  createdAt     DateTime      @default(now())
+
+  quotation          Quotation           @relation(fields: [quotationId], references: [id])
+  availabilityBlocks AvailabilityBlock[]
+  checklists         HandoverChecklist[]
+  review             Review?
+  supportTickets     SupportTicket[]
+
+  @@index([status, holdExpiresAt])
+  @@map("bookings")
+}
+
+// 11. HANDOVER_CHECKLISTS
+model HandoverChecklist {
+  id                  String        @id @default(uuid())
+  bookingId           String
+  checklistType       ChecklistType
+  qrToken             String        @unique
+  itemConditionCounts Json
+  preExistingDefects  String?
+  damageClaimAmount   Float         @default(0)
+  photoUrls           Json?
+  organizerSigned     Boolean       @default(false)
+  vendorSigned        Boolean       @default(false)
+  organizerPin        String?
+  vendorPin           String?
+  signedAt            DateTime?
+  createdAt           DateTime      @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, checklistType])
+  @@map("handover_checklists")
+}
+
+// 12. REVIEWS
+model Review {
+  id               String   @id @default(uuid())
+  bookingId        String   @unique
+  organizerId      String
+  vendorId         String
+  ratingStars      Int
+  onTimeDelivery   Boolean  @default(true)
+  reviewText       String
+  vendorReply      String?
+  isHidden         Boolean  @default(false)
+  moderationReason String?
+  createdAt        DateTime @default(now())
+
+  booking   Booking       @relation(fields: [bookingId], references: [id])
+  organizer User          @relation(fields: [organizerId], references: [id])
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id])
+
+  @@map("reviews")
+}
+
+// 13. SUPPORT_TICKETS
+model SupportTicket {
+  id                String         @id @default(uuid())
+  ticketCode        String         @unique
+  bookingId         String
+  raisedByUserId    String
+  category          TicketCategory
+  status            TicketStatus   @default(OPEN)
+  claimAmount       Float          @default(0)
+  settlementAmount  Float?
+  resolutionNotes   String?
+  resolvedByAdminId String?
+  createdAt         DateTime       @default(now())
+  resolvedAt        DateTime?
+
+  booking         Booking @relation(fields: [bookingId], references: [id])
+  raisedBy        User    @relation("TicketRaisedBy", fields: [raisedByUserId], references: [id])
+  resolvedByAdmin User?   @relation("TicketResolvedBy", fields: [resolvedByAdminId], references: [id])
+
+  @@map("support_tickets")
+}
+
+// 14. MESSAGES
+model Message {
+  id            String   @id @default(uuid())
+  requirementId String
+  senderId      String
+  receiverId    String
+  messageBody   String
+  sentAt        DateTime @default(now())
+
+  requirement EventRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  sender      User             @relation("MessageSender", fields: [senderId], references: [id])
+  receiver    User             @relation("MessageReceiver", fields: [receiverId], references: [id])
+
+  @@index([requirementId, sentAt])
+  @@map("messages")
+}
+
+// 15. AUDIT_LOGS
+model AuditLog {
+  id            String   @id @default(uuid())
+  actorId       String?
+  entityName    String
+  entityId      String
+  actionType    String
+  previousState String?
+  newState      String?
+  stateSnapshot Json?
+  loggedAt      DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityName, entityId])
+  @@index([loggedAt])
+  @@map("audit_logs")
+}
+
+// Notification Feed (Supports Real-Time SLA Watchdog & RFQ Alerts)
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  kind      String   @default("INFO")
+  linkUrl   String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
