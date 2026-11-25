@@ -91,7 +91,13 @@ interface BookingItem {
 }
 
 export function OrganizerWorkspace() {
-  const [tab, setTab] = useState<"rfqs" | "create" | "bookings">("rfqs");
+  const [tab, setTab] = useState<"rfqs" | "create" | "bookings">(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === "create" || localStorage.getItem("eventkit_draft_tray")) {
+      return "create";
+    }
+    return "rfqs";
+  });
   const [categories, setCategories] = useState<Category[]>([]);
   const [rfqs, setRfqs] = useState<Requirement[]>([]);
   const [bookings, setBookings] = useState<BookingItem[]>([]);
@@ -149,14 +155,35 @@ export function OrganizerWorkspace() {
     setBookings(bkRes.bookings);
 
     if (catRes.categories.length > 0 && draftItems.length === 0) {
-      setDraftItems([
-        {
-          categoryId: catRes.categories[0].id,
-          itemName: "Banquet Cushioned Chairs",
-          unitType: "PER_PIECE",
-          requestedQuantity: 250,
-        },
-      ]);
+      const savedTrayRaw = localStorage.getItem("eventkit_draft_tray");
+      if (savedTrayRaw) {
+        try {
+          const parsedTray = JSON.parse(savedTrayRaw) as typeof draftItems;
+          if (Array.isArray(parsedTray) && parsedTray.length > 0) {
+            setDraftItems(
+              parsedTray.map((p) => ({
+                categoryId: p.categoryId || catRes.categories[0].id,
+                itemName: p.itemName,
+                unitType: p.unitType || "PER_PIECE",
+                requestedQuantity: p.requestedQuantity || 10,
+              }))
+            );
+            localStorage.removeItem("eventkit_draft_tray");
+            setFeedbackMsg("Your selected Equipment Tray items are loaded below—add dates & venue to broadcast!");
+          }
+        } catch {
+          localStorage.removeItem("eventkit_draft_tray");
+        }
+      } else {
+        setDraftItems([
+          {
+            categoryId: catRes.categories[0].id,
+            itemName: "Banquet Cushioned Chairs",
+            unitType: "PER_PIECE",
+            requestedQuantity: 250,
+          },
+        ]);
+      }
     }
 
     const bestInitial =

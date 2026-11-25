@@ -274,6 +274,20 @@ async function main() {
     },
   });
 
+  await prisma.serviceListing.create({
+    data: {
+      vendorId: vpRoyal.id,
+      categoryId: catTent.id,
+      skuCode: "RYL-BED-300",
+      itemName: "Gadda, Pillow & White Bedsheet Set (Tent Bedding)",
+      description: "Clean foam gadda mattress with cotton pillow, bolster, and crisp white cover.",
+      unitType: "PER_SET",
+      baseRatePerDay: 110,
+      replacementValue: 1800,
+      totalPhysicalStock: 300,
+    },
+  });
+
   const royalSound = await prisma.serviceListing.create({
     data: {
       vendorId: vpRoyal.id,
@@ -313,6 +327,20 @@ async function main() {
       baseRatePerDay: 320,
       replacementValue: 6500,
       totalPhysicalStock: 80,
+    },
+  });
+
+  await prisma.serviceListing.create({
+    data: {
+      vendorId: vpMalwa.id,
+      categoryId: catTent.id,
+      skuCode: "MLW-BED-400",
+      itemName: "Event Gadda, Cushion & Pillow Combo",
+      description: "High-density guest gadda mattress with 2 pillows and clean linen.",
+      unitType: "PER_SET",
+      baseRatePerDay: 95,
+      replacementValue: 1600,
+      totalPhysicalStock: 400,
     },
   });
 

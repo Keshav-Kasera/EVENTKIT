@@ -156,6 +156,142 @@ catalogRouter.get("/vendors", async (req, res) => {
   });
 });
 
+/**
+ * Interactive Requirement Selection Tray Matcher:
+ * Accepts [{ query, categoryId?, quantity }] and returns VERIFIED vendors matching requested items & stock.
+ */
+catalogRouter.post("/match-tray", async (req, res) => {
+  const trayItems = Array.isArray(req.body?.items)
+    ? (req.body.items as Array<{ query?: string; categoryId?: string; quantity?: number }>)
+    : [];
+  const locality = req.body?.locality ? String(req.body.locality) : undefined;
+  const rawLat = req.body?.lat !== undefined ? Number(req.body.lat) : NaN;
+  const rawLng = req.body?.lng !== undefined ? Number(req.body.lng) : NaN;
+  const hasLiveGps = Number.isFinite(rawLat) && Number.isFinite(rawLng);
+
+  const refLocality = INDORE_LOCALITIES.find((l) => l.name === locality) ?? INDORE_LOCALITIES[0];
+  const refLat = hasLiveGps ? rawLat : refLocality.lat;
+  const refLng = hasLiveGps ? rawLng : refLocality.lng;
+
+  const vendors = await prisma.vendorProfile.findMany({
+    where: { verificationStatus: "VERIFIED" },
+    include: {
+      user: { select: { fullName: true, city: true, phone: true, email: true } },
+      listings: {
+        include: { category: true, availabilityBlocks: true },
+      },
+      reviews: { where: { isHidden: false }, select: { ratingStars: true } },
+    },
+  });
+
+  const matchedVendors = vendors
+    .map((v) => {
+      const distanceKm = haversineKm(refLat, refLng, v.latitude, v.longitude);
+      let matchedCount = 0;
+      let estimatedDailyTotal = 0;
+      const matchedLineDetails: Array<{
+        requestedQuery: string;
+        requestedQty: number;
+        matchedItemName: string;
+        baseRatePerDay: number;
+        allocatableCapacity: number;
+        stockEnough: boolean;
+      }> = [];
+
+      for (const reqItem of trayItems) {
+        const qText = String(reqItem.query || "").trim().toLowerCase();
+        const qty = Math.max(1, Number(reqItem.quantity) || 1);
+        const tokens = qText.split(/\s+/).filter((t) => t.length >= 2);
+
+        const match = v.listings.find((l) => {
+          if (reqItem.categoryId && l.categoryId !== reqItem.categoryId) return false;
+          if (tokens.length === 0) return true;
+          const hay = `${l.itemName} ${l.description || ""} ${l.category.name}`.toLowerCase();
+          return tokens.some((tok) => hay.includes(tok));
+        });
+
+        if (match) {
+          const peakReserved = match.availabilityBlocks.reduce(
+            (m, b) => Math.max(m, b.reservedQuantity),
+            0
+          );
+          const avail = computeIndicativeAvailability({
+            totalPhysicalStock: match.totalPhysicalStock,
+            safetyBufferPct: v.safetyBufferPct,
+            reservedQuantity: peakReserved,
+            requestedQuantity: qty,
+            stockRefreshedAt: v.stockRefreshedAt,
+          });
+          matchedCount++;
+          estimatedDailyTotal += Math.round(match.baseRatePerDay * qty);
+          matchedLineDetails.push({
+            requestedQuery: reqItem.query || match.itemName,
+            requestedQty: qty,
+            matchedItemName: match.itemName,
+            baseRatePerDay: match.baseRatePerDay,
+            allocatableCapacity: avail.allocatableCapacity,
+            stockEnough: avail.allocatableCapacity >= qty,
+          });
+        }
+      }
+
+      if (trayItems.length > 0 && matchedCount === 0) return null;
+
+      const avgRating =
+        v.reviews.length > 0
+          ? Math.round(
+              (v.reviews.reduce((s, r) => s + r.ratingStars, 0) / v.reviews.length) * 10
+            ) / 10
+          : null;
+
+      return {
+        id: v.id,
+        businessName: v.businessName,
+        locality: v.locality,
+        city: v.user.city,
+        distanceKm,
+        withinGeofence25Km: distanceKm <= 25,
+        vriScore: v.vriScore,
+        safetyBufferPct: v.safetyBufferPct,
+        reviewCount: v.reviews.length,
+        avgRating,
+        matchedCount,
+        totalTrayCount: trayItems.length,
+        estimatedDailyTotal,
+        matchedLineDetails,
+        maskedContact: {
+          phone: maskPhone(v.user.phone),
+          email: maskEmail(v.user.email),
+          warehouseAddress: `${v.locality}, ${v.user.city} (Revealed upon confirmation)`,
+        },
+        listings: v.listings.map((item) => ({
+          id: item.id,
+          skuCode: item.skuCode,
+          itemName: item.itemName,
+          description: item.description,
+          categoryId: item.categoryId,
+          categoryName: item.category.name,
+          unitType: item.unitType,
+          baseRatePerDay: item.baseRatePerDay,
+          totalPhysicalStock: item.totalPhysicalStock,
+          availability: computeIndicativeAvailability({
+            totalPhysicalStock: item.totalPhysicalStock,
+            safetyBufferPct: v.safetyBufferPct,
+            reservedQuantity: item.availabilityBlocks.reduce(
+              (m, b) => Math.max(m, b.reservedQuantity),
+              0
+            ),
+            stockRefreshedAt: v.stockRefreshedAt,
+          }),
+        })),
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => Boolean(x))
+    .sort((a, b) => b.matchedCount - a.matchedCount || a.distanceKm - b.distanceKm);
+
+  return res.json({ vendors: matchedVendors });
+});
+
 catalogRouter.get("/vendors/:id", async (req, res) => {
   const vendor = await prisma.vendorProfile.findFirst({
     where: { id: req.params.id, verificationStatus: "VERIFIED" },

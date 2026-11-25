@@ -17,13 +17,19 @@
 
 ---
 
-## Why EventKit?
+## Why EventKit Exists (The Real-World Necessity)
 
-Local event infrastructure suppliers (tent houses, commercial catering equipment, sound/lighting rigs, and stage decorators) mostly operate offline. Organizers face four recurring failures:
-1. **Low Discoverability:** Reliable local godowns have no searchable catalog or live stock status.
-2. **Hidden Freight & Labor Fees:** Verbal quotes bundle or omit transport and setup crew costs until event day.
-3. **Offline Double-Booking:** Sudden walk-in rentals cause last-minute event-day cancellations.
-4. **Post-Event Damage Disputes:** Lack of pre-dispatch condition records turns broken or missing items into financial conflicts.
+Consider someone—an interior designer, corporate coordinator, wedding planner, or college fest host—who has just settled into a city like **Indore** with an upcoming event and **zero local supplier contacts**.
+
+Local event infrastructure (tent houses, *gadda*/pillows, commercial catering utensils, sound rigs, and stage decorators) operates almost entirely offline. Without EventKit, organizing an event looks like this:
+
+| Pain Point | Without EventKit (Offline Chaos) | With EventKit |
+|---|---|---|
+| **Discovery** | Calling 15 random directory phone numbers without knowing if they actually have 300 chairs or 50 *gadda* sets in stock. | **Interactive Equipment Selection Tray + Live GPS**: Pick exact items & quantities, filter verified suppliers within 25 km, and see live buffered stock. |
+| **Hidden Pricing** | Verbal lump-sum quotes; extra truck freight and setup labor charges appear on event day. | **3-Way Unbundled Quotations**: Every bid strictly separates **Item Rent**, **Truck & Freight**, and **Setup Labor** side-by-side. |
+| **Double-Booking** | Vendors maintain paper registers; sudden offline walk-in rentals cause event-day cancellations. | **10% Safety Reserve + 24h Soft-Hold**: Keeps 10% stock cushion offline and locks chosen quotes atomically for 24h while the vendor confirms. |
+| **Damage Disputes** | Post-event arguments over torn canopies or missing chairs with zero pre-event proof. | **QR Delivery & Return Audits**: Scannable HMAC-signed checklists with photo evidence and Admin dispute arbitration. |
+| **Spam & Bypassing** | Sharing phone numbers early triggers spam calls and unrecorded cash deals. | **Privacy Contact Masking**: Phone numbers and exact godown addresses stay masked until a booking reaches `CONFIRMED`. |
 
 ---
 
@@ -31,6 +37,7 @@ Local event infrastructure suppliers (tent houses, commercial catering equipment
 
 | Feature | How It Works |
 |---|---|
+| **Interactive Requirement Tray** | Browse & pick equipment (tents, *gadda* & pillows, chairs, sound, catering) with custom quantities, click **Apply & Find Matching Suppliers**, or publish directly for bids. |
 | **Live GPS & 25 km Geofence Matching** | Detects live browser location (with locality fallback) and ranks verified local suppliers by Haversine distance (`<= 25 km`). |
 | **3-Way Unbundled Quotations** | Every bid strictly separates **Base Equipment Rental**, **Truck & Freight Cost**, and **Setup/Dismantling Labor** (+ GST & deposit), compared side-by-side in a Comparison Matrix. |
 | **10% Safety Buffer & Indicative Stock** | Caps online allocatable inventory at 90% of physical stock to cushion offline walk-ins, flagging status as *Ready to Book*, *Low Stock Left*, or *Check With Supplier* (>30 days stale). |
