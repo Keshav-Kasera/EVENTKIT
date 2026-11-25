@@ -3,6 +3,7 @@ import {
   Award,
   CheckCircle2,
   Eye,
+  LocateFixed,
   MessageSquare,
   Plus,
   QrCode,
@@ -11,7 +12,7 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
-import { INDORE_LOCALITIES } from "@eventkit/shared";
+import { INDORE_LOCALITIES, haversineKm } from "@eventkit/shared";
 import { apiFetch, formatINR } from "../lib/api";
 import { StatusBadge } from "../components/StatusBadge";
 import { CountdownTimer } from "../components/CountdownTimer";
@@ -110,6 +111,8 @@ export function OrganizerWorkspace() {
     new Date(Date.now() + 86400000 * 12).toISOString().slice(0, 10)
   );
   const [venueLocality, setVenueLocality] = useState<string>(INDORE_LOCALITIES[0].name);
+  const [venueLat, setVenueLat] = useState<number | undefined>(undefined);
+  const [venueLng, setVenueLng] = useState<number | undefined>(undefined);
   const [venueAddress, setVenueAddress] = useState("");
   const [guestCount, setGuestCount] = useState(250);
   const [targetBudget, setTargetBudget] = useState(45000);
@@ -193,6 +196,8 @@ export function OrganizerWorkspace() {
           endDate,
           venueLocality,
           venueAddress,
+          venueLat,
+          venueLng,
           guestCount: Number(guestCount),
           targetBudget: Number(targetBudget) || undefined,
           items: draftItems,
@@ -599,10 +604,44 @@ export function OrganizerWorkspace() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold">Indore Locality (25km Geofence) *</label>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="block text-xs font-semibold">
+                  Indore Event Area (25 km Match) *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!("geolocation" in navigator)) return;
+                    navigator.geolocation.getCurrentPosition((pos) => {
+                      const lat = pos.coords.latitude;
+                      const lng = pos.coords.longitude;
+                      setVenueLat(lat);
+                      setVenueLng(lng);
+                      let best = INDORE_LOCALITIES[0].name as string;
+                      let minDist = Infinity;
+                      for (const loc of INDORE_LOCALITIES) {
+                        const d = haversineKm(lat, lng, loc.lat, loc.lng);
+                        if (d < minDist) {
+                          minDist = d;
+                          best = loc.name;
+                        }
+                      }
+                      setVenueLocality(best);
+                      setFeedbackMsg(`Detected live GPS coordinates and matched nearest Indore zone: ${best}`);
+                    });
+                  }}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-saffron hover:underline"
+                >
+                  <LocateFixed className="h-3 w-3" /> Use Live GPS
+                </button>
+              </div>
               <select
                 value={venueLocality}
-                onChange={(e) => setVenueLocality(e.target.value)}
+                onChange={(e) => {
+                  setVenueLocality(e.target.value);
+                  setVenueLat(undefined);
+                  setVenueLng(undefined);
+                }}
                 className="ek-input"
               >
                 {INDORE_LOCALITIES.map((l) => (

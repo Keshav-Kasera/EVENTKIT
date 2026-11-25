@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   EyeOff,
   Filter,
+  LocateFixed,
   Lock,
   QrCode,
   Search,
@@ -73,13 +74,37 @@ export function LandingDiscoveryPage() {
   const [vendors, setVendors] = useState<PublicVendor[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedLocality, setSelectedLocality] = useState<string>(INDORE_LOCALITIES[0].name);
+  const [liveCoords, setLiveCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<"idle" | "locating" | "active" | "denied">("idle");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+
+  function detectLiveLocation() {
+    if (!("geolocation" in navigator)) {
+      setGpsStatus("denied");
+      return;
+    }
+    setGpsStatus("locating");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLiveCoords({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+        setGpsStatus("active");
+      },
+      () => {
+        setGpsStatus("denied");
+      },
+      { enableHighAccuracy: false, timeout: 7000, maximumAge: 120000 }
+    );
+  }
 
   useEffect(() => {
     apiFetch<{ categories: Category[] }>("/catalog/categories")
       .then((res) => setCategories(res.categories))
       .catch(() => {});
+    detectLiveLocation();
   }, []);
 
   useEffect(() => {
@@ -87,12 +112,24 @@ export function LandingDiscoveryPage() {
     const params = new URLSearchParams();
     if (selectedCategory) params.set("categoryId", selectedCategory);
     if (selectedLocality) params.set("locality", selectedLocality);
+    if (liveCoords) {
+      params.set("lat", String(liveCoords.lat));
+      params.set("lng", String(liveCoords.lng));
+    }
     if (searchQuery.trim()) params.set("q", searchQuery.trim());
 
-    apiFetch<{ vendors: PublicVendor[] }>(`/catalog/vendors?${params.toString()}`)
-      .then((res) => setVendors(res.vendors))
+    apiFetch<{
+      vendors: PublicVendor[];
+      locationMeta?: { mode: string; nearestLocality: string };
+    }>(`/catalog/vendors?${params.toString()}`)
+      .then((res) => {
+        setVendors(res.vendors);
+        if (res.locationMeta?.mode === "LIVE_GPS" && res.locationMeta.nearestLocality) {
+          setSelectedLocality(res.locationMeta.nearestLocality);
+        }
+      })
       .finally(() => setLoading(false));
-  }, [selectedCategory, selectedLocality, searchQuery]);
+  }, [selectedCategory, selectedLocality, liveCoords, searchQuery]);
 
   async function handleQuickOrganizerStart() {
     if (user?.role === "ORGANIZER") {
@@ -248,7 +285,11 @@ export function LandingDiscoveryPage() {
       {/* Interactive Indore 25km Geofence Radar */}
       <IndoreGeofenceMap
         selectedLocality={selectedLocality}
-        onSelectLocality={setSelectedLocality}
+        onSelectLocality={(loc) => {
+          setLiveCoords(null);
+          setGpsStatus("idle");
+          setSelectedLocality(loc);
+        }}
         vendors={vendors}
       />
 
@@ -266,6 +307,23 @@ export function LandingDiscoveryPage() {
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={detectLiveLocation}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                gpsStatus === "active"
+                  ? "border-teal/40 bg-teal-soft text-teal-dark"
+                  : "border-rule bg-surface text-ink hover:bg-sand"
+              }`}
+              title="Use your device GPS to sort suppliers nearest to you"
+            >
+              <LocateFixed className="h-3.5 w-3.5 text-saffron" />
+              {gpsStatus === "locating"
+                ? "Detecting GPS..."
+                : gpsStatus === "active"
+                ? "Live GPS Active (Nearest First)"
+                : "Use My Live Location"}
+            </button>
             <Filter className="h-3.5 w-3.5 text-muted" />
             <select
               value={selectedCategory}
@@ -281,7 +339,11 @@ export function LandingDiscoveryPage() {
             </select>
             <select
               value={selectedLocality}
-              onChange={(e) => setSelectedLocality(e.target.value)}
+              onChange={(e) => {
+                setLiveCoords(null);
+                setGpsStatus("idle");
+                setSelectedLocality(e.target.value);
+              }}
               className="ek-input w-auto py-2 text-xs font-medium"
             >
               {INDORE_LOCALITIES.map((l) => (
@@ -319,8 +381,14 @@ export function LandingDiscoveryPage() {
                       <p className="mt-1 text-xs text-muted">
                         {vendor.locality}, {vendor.city} •{" "}
                         <span className="font-mono font-semibold text-ink">
-                          {vendor.distanceKm} km from {selectedLocality}
+                          {vendor.distanceKm} km from{" "}
+                          {liveCoords ? "your live location" : selectedLocality}
                         </span>
+                        {!vendor.withinGeofence25Km && (
+                          <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+                            Outside 25 km Indore Zone
+                          </span>
+                        )}
                       </p>
                     </div>
 

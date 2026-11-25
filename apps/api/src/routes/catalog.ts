@@ -28,10 +28,27 @@ catalogRouter.get("/vendors", async (req, res) => {
   const categoryId = req.query.categoryId ? String(req.query.categoryId) : undefined;
   const search = req.query.q ? String(req.query.q).trim().toLowerCase() : "";
   const locality = req.query.locality ? String(req.query.locality) : undefined;
+  const rawLat = req.query.lat !== undefined ? Number(req.query.lat) : NaN;
+  const rawLng = req.query.lng !== undefined ? Number(req.query.lng) : NaN;
+  const hasLiveGps = Number.isFinite(rawLat) && Number.isFinite(rawLng);
   const startDate = req.query.startDate ? new Date(String(req.query.startDate)) : new Date();
   const endDate = req.query.endDate ? new Date(String(req.query.endDate)) : startDate;
 
   const refLocality = INDORE_LOCALITIES.find((l) => l.name === locality) ?? INDORE_LOCALITIES[0];
+  const refLat = hasLiveGps ? rawLat : refLocality.lat;
+  const refLng = hasLiveGps ? rawLng : refLocality.lng;
+
+  let nearestLocality: string = refLocality.name;
+  if (hasLiveGps) {
+    let bestDist = Infinity;
+    for (const loc of INDORE_LOCALITIES) {
+      const d = haversineKm(rawLat, rawLng, loc.lat, loc.lng);
+      if (d < bestDist) {
+        bestDist = d;
+        nearestLocality = loc.name;
+      }
+    }
+  }
 
   const vendors = await prisma.vendorProfile.findMany({
     where: {
@@ -63,7 +80,7 @@ catalogRouter.get("/vendors", async (req, res) => {
 
   const formatted = vendors
     .map((v) => {
-      const distanceKm = haversineKm(refLocality.lat, refLocality.lng, v.latitude, v.longitude);
+      const distanceKm = haversineKm(refLat, refLng, v.latitude, v.longitude);
       const listings = v.listings.map((item) => {
         const peakReserved = item.availabilityBlocks.reduce(
           (max, b) => Math.max(max, b.reservedQuantity),
@@ -127,9 +144,16 @@ catalogRouter.get("/vendors", async (req, res) => {
         v.locality.toLowerCase().includes(search) ||
         v.listings.some((l) => l.itemName.toLowerCase().includes(search))
       );
-    });
+    })
+    .sort((a, b) => a.distanceKm - b.distanceKm);
 
-  return res.json({ vendors: formatted });
+  return res.json({
+    vendors: formatted,
+    locationMeta: {
+      mode: hasLiveGps ? "LIVE_GPS" : "LOCALITY",
+      nearestLocality,
+    },
+  });
 });
 
 catalogRouter.get("/vendors/:id", async (req, res) => {
